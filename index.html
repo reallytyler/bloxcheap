@@ -106,9 +106,9 @@
     </footer>
 
     <script>
+        // DO NOT add a / at the end of this URL
         const API_URL = 'https://blox-bridge.nottylerxd.workers.dev'; 
 
-        // 1. Load Main Site Data (Stock & Reviews)
         async function loadSiteData() {
             try {
                 const response = await fetch('https://reallytyler.github.io/.well-known/data.txt');
@@ -132,14 +132,14 @@
             } catch (e) { console.error("Error loading site data"); }
         }
 
-        // 2. Load Community Feed
         async function loadCommunity() {
             try {
-                const res = await fetch(`${API_URL}`);
+                // FIXED: Changed from `${API_URL}` to `${API_URL}/messages`
+                const res = await fetch(`${API_URL}/messages`);
                 const messages = await res.json();
                 const feed = document.getElementById('community-feed');
                 
-                if (messages.length === 0) {
+                if (!messages || messages.length === 0) {
                     feed.innerHTML = '<p class="text-center text-gray-600 py-10">No messages yet. Be the first!</p>';
                     return;
                 }
@@ -154,11 +154,10 @@
                     </div>
                 `).join('');
             } catch (e) {
-                document.getElementById('community-feed').innerHTML = '<p class="text-center text-red-500 py-10 text-xs">Server Offline</p>';
+                document.getElementById('community-feed').innerHTML = '<p class="text-center text-red-500 py-10 text-xs">Connecting...</p>';
             }
         }
 
-        // 3. Post Message
         async function postToCommunity() {
             const user = document.getElementById('comm-name').value;
             const text = document.getElementById('comm-text').value;
@@ -168,7 +167,7 @@
             if (!user || !text) return alert("Fill in your name and message!");
 
             btn.disabled = true;
-            status.innerText = "Checking Filter...";
+            status.innerText = "Posting...";
 
             try {
                 const res = await fetch(`${API_URL}/messages`, {
@@ -177,14 +176,13 @@
                     body: JSON.stringify({ user, text })
                 });
 
-                const data = await res.json();
-
                 if (res.ok) {
                     document.getElementById('comm-text').value = '';
                     status.style.color = "#22c55e";
                     status.innerText = "Success! Posted to wall.";
                     loadCommunity();
                 } else {
+                    const data = await res.json();
                     status.style.color = "#ef4444";
                     status.innerText = data.error || "Failed to post.";
                 }
@@ -192,15 +190,13 @@
                 status.innerText = "Could not connect to server.";
             } finally {
                 btn.disabled = false;
-                setTimeout(() => { if(status.innerText !== "Success! Posted to wall.") status.innerText = ""; }, 4000);
+                setTimeout(() => { status.innerText = ""; }, 4000);
             }
         }
 
-        // Initialize
         loadSiteData();
         loadCommunity();
-        // Refresh feed every 15 seconds
-        setInterval(loadCommunity, 15000);
+        setInterval(loadCommunity, 10000); // Check for new messages every 10s
     </script>
 </body>
 </html>
