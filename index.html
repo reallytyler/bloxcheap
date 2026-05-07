@@ -135,7 +135,7 @@
         // 2. Load Community Feed
         async function loadCommunity() {
             try {
-                const res = await fetch(`${API_URL}/messages`);
+                const res = await fetch(`${API_URL}`);
                 const messages = await res.json();
                 const feed = document.getElementById('community-feed');
                 
