@@ -14,6 +14,9 @@
         .featured-card { transform: scale(1.1); border-color: rgba(34, 197, 94, 0.4) !important; z-index: 10; opacity: 1 !important; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .verified-badge { width: 16px; height: 16px; display: inline-block; }
+        
+        /* New Community Styles */
+        .msg-bubble { background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 10px 15px; margin-bottom: 8px; border-left: 3px solid #22c55e; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -63,8 +66,27 @@
             </button>
 
             <div id="review-slider" class="flex items-center gap-8 overflow-x-auto hide-scrollbar scroll-smooth py-12 px-10">
-                <!-- Data injected here -->
                 <p class="w-full text-center text-gray-500 italic">Fetching reviews from server...</p>
+            </div>
+        </section>
+
+        <!-- Community Section -->
+        <section class="max-w-4xl mx-auto mb-20">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="glass-panel p-6 rounded-2xl">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2 text-green-500"><i class="fas fa-comment-dots"></i> Say something...</h3>
+                    <input type="text" id="comm-name" placeholder="Your Roblox Username" class="w-full bg-black/40 border border-white/10 rounded-lg p-3 mb-3 text-sm focus:outline-none focus:border-green-500">
+                    <textarea id="comm-text" placeholder="Write a message to the community..." class="w-full bg-black/40 border border-white/10 rounded-lg p-3 h-24 text-sm focus:outline-none focus:border-green-500 mb-3"></textarea>
+                    <button onclick="postToCommunity()" id="post-btn" class="w-full bg-green-500 hover:bg-green-600 text-black font-bold py-3 rounded-lg transition-all text-sm uppercase">Post Message</button>
+                    <p id="comm-status" class="text-[10px] mt-2 text-center text-gray-500"></p>
+                </div>
+                
+                <div class="glass-panel p-6 rounded-2xl flex flex-col">
+                    <h3 class="text-sm font-black uppercase text-gray-500 mb-4 tracking-widest">Community Feed</h3>
+                    <div id="community-feed" class="flex-grow overflow-y-auto max-h-[250px] pr-2 text-sm">
+                        <p class="text-gray-600 italic">Connecting to feed...</p>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -98,50 +120,91 @@
     </footer>
 
     <script>
-        // Fetch Data from your URL
+        const WORKER_URL = 'https://saysomething.nottylerxd.workers.dev';
+
         async function loadSiteData() {
             try {
                 const response = await fetch('https://reallytyler.github.io/.well-known/data.txt');
                 const data = await response.json();
-
-                // Update Stock & Sold
                 document.getElementById('stock-val').innerText = data.stock;
                 document.getElementById('sold-val').innerText = data.sold;
 
-                // Update Reviews
                 const slider = document.getElementById('review-slider');
-                slider.innerHTML = ''; // Clear loading text
-
+                slider.innerHTML = '';
                 data.reviews.forEach(rev => {
                     const isAnkon = rev.name.toLowerCase() === 'ankon';
-                    const card = `
+                    slider.innerHTML += `
                         <div class="glass-panel min-w-[320px] p-8 rounded-[2rem] transition-all duration-500 ${isAnkon ? 'featured-card min-w-[360px] shadow-2xl shadow-green-500/10' : 'opacity-60'}">
                             <div class="flex items-center gap-4 mb-4">
                                 <img src="${rev.avatar}" class="w-12 h-12 rounded-full border border-white/10 ${isAnkon ? 'border-green-500 border-2 p-1' : ''}">
                                 <div>
                                     <p class="font-bold flex items-center gap-1">${rev.name} <img src="https://cdn.solo.to/images/verified.svg" class="verified-badge"></p>
-                                    <div class="flex text-yellow-500 text-[8px] tracking-widest">
-                                        ${'<i class="fas fa-star"></i>'.repeat(rev.rating)}
-                                    </div>
+                                    <div class="flex text-yellow-500 text-[8px] tracking-widest">${'<i class="fas fa-star"></i>'.repeat(rev.rating)}</div>
                                 </div>
                             </div>
                             <p class="text-gray-400 text-sm leading-relaxed italic">"${rev.text}"</p>
-                        </div>
-                    `;
-                    slider.innerHTML += card;
+                        </div>`;
                 });
-            } catch (error) {
-                console.error('Error loading data:', error);
-                document.getElementById('review-slider').innerHTML = '<p class="w-full text-center text-red-500">Failed to load live data.</p>';
+            } catch (error) { console.error('Error:', error); }
+        }
+
+        async function fetchCommunity() {
+            try {
+                const res = await fetch(WORKER_URL);
+                const msgs = await res.json();
+                const container = document.getElementById('community-feed');
+                container.innerHTML = msgs.length ? '' : '<p class="text-gray-600">No messages yet.</p>';
+                msgs.forEach(m => {
+                    container.innerHTML += `
+                        <div class="msg-bubble">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-green-400 text-xs">@${m.user}</span>
+                                <span class="text-[9px] text-gray-600">${m.time}</span>
+                            </div>
+                            <p class="text-gray-300 text-xs">${m.text}</p>
+                        </div>`;
+                });
+            } catch (e) { document.getElementById('community-feed').innerHTML = "Error loading feed."; }
+        }
+
+        async function postToCommunity() {
+            const user = document.getElementById('comm-name').value;
+            const text = document.getElementById('comm-text').value;
+            const btn = document.getElementById('post-btn');
+            const status = document.getElementById('comm-status');
+
+            if(!user || !text) return alert("Fill all fields");
+
+            btn.disabled = true;
+            btn.innerText = "Checking...";
+
+            try {
+                const res = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ user, text }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await res.json();
+                if(res.ok) {
+                    status.innerText = "Message posted!";
+                    document.getElementById('comm-text').value = '';
+                    fetchCommunity();
+                } else {
+                    status.innerText = data.error || "Failed to post.";
+                }
+            } catch (e) {
+                status.innerText = "System error.";
             }
+            btn.disabled = false;
+            btn.innerText = "Post Message";
         }
 
-        function scrollSlider(val) {
-            document.getElementById('review-slider').scrollBy({ left: val, behavior: 'smooth' });
-        }
+        function scrollSlider(val) { document.getElementById('review-slider').scrollBy({ left: val, behavior: 'smooth' }); }
 
-        // Initialize
+        // Init
         loadSiteData();
+        fetchCommunity();
     </script>
 </body>
 </html>
