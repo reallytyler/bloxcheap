@@ -59,27 +59,6 @@
             </div>
         </section>
 
-        <!-- Community Wall -->
-        <section class="max-w-5xl mx-auto mb-24">
-            <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
-                <!-- Input Box -->
-                <div class="lg:col-span-2 glass-panel p-8 rounded-[2rem]">
-                    <h3 class="text-xl font-bold mb-6 flex items-center gap-2"><i class="fas fa-comment-dots text-green-500"></i> Say Something</h3>
-                    <input type="text" id="comm-name" placeholder="Roblox Username" class="w-full bg-black/40 border border-white/10 rounded-xl p-3 mb-3 text-sm focus:outline-none focus:border-green-500 transition-all">
-                    <textarea id="comm-text" placeholder="Type a message..." class="w-full bg-black/40 border border-white/10 rounded-xl p-3 h-28 text-sm focus:outline-none focus:border-green-500 transition-all mb-4"></textarea>
-                    <button onclick="postToCommunity()" id="post-btn" class="w-full bg-green-500 hover:bg-green-600 text-black font-black py-4 rounded-xl transition-all uppercase text-xs tracking-widest">Send Message</button>
-                    <p id="comm-status" class="text-center text-[10px] mt-3 font-bold uppercase tracking-wider text-gray-500"></p>
-                </div>
-                <!-- Feed -->
-                <div class="lg:col-span-3 glass-panel p-8 rounded-[2rem] flex flex-col">
-                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-6">Recent Community Feed</p>
-                    <div id="community-feed" class="overflow-y-auto max-h-[350px] pr-2">
-                        <div class="text-center py-10 text-gray-600 animate-pulse">Connecting to server...</div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
 
     <footer class="w-full border-t border-white/5 bg-[#010307] py-12 px-6">
         <div class="max-w-6xl mx-auto flex flex-col items-center">
@@ -91,13 +70,11 @@
                 </div>
             </div>
             <div class="text-gray-600 text-[10px] uppercase font-bold tracking-widest">&copy; 2024 Blox Cheap Marketplace</div>
-            <a href="terms/">Terms</a> | <a href="privacy/">Privacy</a>
         </div>
+        <a href="terms/">Terms</a> | <a href="privacy/">Privacy</a>
     </footer>
 
     <script>
-        // DO NOT add a / at the end of this URL
-        const API_URL = 'https://blox-bridge.nottylerxd.workers.dev'; 
 
         async function loadSiteData() {
             try {
@@ -121,72 +98,6 @@
                 `).join('');
             } catch (e) { console.error("Error loading site data"); }
         }
-
-        async function loadCommunity() {
-            try {
-               
-                const res = await fetch(`${API_URL}/messages`);
-                const messages = await res.json();
-                const feed = document.getElementById('community-feed');
-                
-                if (!messages || messages.length === 0) {
-                    feed.innerHTML = '<p class="text-center text-gray-600 py-10">No messages yet. Be the first!</p>';
-                    return;
-                }
-
-                feed.innerHTML = messages.map(m => `
-                    <div class="msg-bubble">
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="text-[10px] font-black text-green-500 uppercase tracking-tighter">@${m.user}</span>
-                            <span class="text-[8px] text-gray-600 font-bold">${new Date(m.time).toLocaleTimeString()}</span>
-                        </div>
-                        <div class="text-xs text-gray-300 leading-relaxed">${m.text}</div>
-                    </div>
-                `).join('');
-            } catch (e) {
-                document.getElementById('community-feed').innerHTML = '<p class="text-center text-red-500 py-10 text-xs">Connecting...</p>';
-            }
-        }
-
-        async function postToCommunity() {
-            const user = document.getElementById('comm-name').value;
-            const text = document.getElementById('comm-text').value;
-            const status = document.getElementById('comm-status');
-            const btn = document.getElementById('post-btn');
-
-            if (!user || !text) return alert("Fill in your name and message!");
-
-            btn.disabled = true;
-            status.innerText = "Posting...";
-
-            try {
-                const res = await fetch(`${API_URL}/messages`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user, text })
-                });
-
-                if (res.ok) {
-                    document.getElementById('comm-text').value = '';
-                    status.style.color = "#22c55e";
-                    status.innerText = "Success! Posted to wall.";
-                    loadCommunity();
-                } else {
-                    const data = await res.json();
-                    status.style.color = "#ef4444";
-                    status.innerText = data.error || "Failed to post.";
-                }
-            } catch (e) {
-                status.innerText = "Could not connect to server.";
-            } finally {
-                btn.disabled = false;
-                setTimeout(() => { status.innerText = ""; }, 4000);
-            }
-        }
-
-        loadSiteData();
-        loadCommunity();
-        setInterval(loadCommunity, 10000); // Check for new messages every 10s
     </script>
 </body>
 </html>
